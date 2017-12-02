@@ -1,0 +1,7 @@
+Run
+`./durations.sh /path/to/videos/for/one/day/ > some_file`
+
+Set the start time/day in `parse_nmea.py` appropriately.
+
+Run
+`./parse_nmea.py some_file /path/to/nmea/logs.log`
