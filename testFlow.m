@@ -2,12 +2,16 @@ function testFlow()
   close all;
   opticFlow = opticalFlowLK('NoiseThreshold',0.009);
   opticFlow = opticalFlowHS;
-  opticFlow = opticalFlowFarneback;
+  opticFlow = opticalFlowFarneback();
   [vidReader, speeds] = loadVids();
-  vidReader.CurrentTime = 10 * 60 + 46;
+  vidReader.CurrentTime = 10 * 60 + 46; % For GP060042 boat
+%  vidReader.CurrentTime = 6 * 60 + 30; % For GP010041 kayak
+%  vidReader.CurrentTime = 0 * 60 + 5; % For GP010041 start
   i = 0;
   objects = {};
-  while hasFrame(vidReader) && i < 150
+  prevObjects = {};
+  costs = [];
+  while hasFrame(vidReader) && i < 30
     tic
     frameRGB = readFrame(vidReader);
     frameGray = rgb2gray(frameRGB);
@@ -17,8 +21,10 @@ function testFlow()
     flow = estimateFlow(opticFlow,frameGray);
     toc
 
+    frameHSV = rgb2hsv(frameRGB);
+
     tic
-    objects = findFlowObj(rgb2hsv(frameRGB), flow, objects, i == 0);
+    objects = findFlowObj(frameHSV, flow, objects, i == 0);
     toc
 
     tic
@@ -27,11 +33,20 @@ function testFlow()
     plotObjects(objects, size(flow.Vx));
     hold off;
     drawnow;
-    pause(0.25);
     toc
 
+    pause(0.25);
+    tic
+    cost = evalObjects(frameHSV, objects, prevObjects)
+    toc
+    costs = [costs cost];
+
+    prevObjects = objects;
     i = i + 1
   end
+  costs
+  sum10toend = sum(costs(10:end))
+  return
 
   [expVx, expVy] = fitFlow(flow.Vx, flow.Vy, ceil(432 * [0.25, 1]), ceil(240 * [0.5, 1]));
   expFlow = opticalFlow(expVx, expVy);

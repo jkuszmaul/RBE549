@@ -27,7 +27,7 @@ function objects = findFlowObj(imgHSV, flow, prevObjects, isinit)
 xscale = 1.0 / size(flow.Vx, 2);
 yscale = 1.0 / size(flow.Vy, 1);
 
-blueH = 0.5940
+blueH = 0.5940;
 blueres = (imgHSV(:, :, 1) - blueH).^2;
 
 % Update all the pre-existing objects using their
