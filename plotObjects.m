@@ -4,7 +4,6 @@ function plotObjects(objects, imsize)
   y = [];
   u = [];
   v = [];
-  color = 'c';
   for i = 1:numel(objects)
     obj = objects{i};
     posx = ceil(obj.pos(1) * imsize(2));
@@ -23,9 +22,16 @@ function plotObjects(objects, imsize)
     if obj.confidence < 0.5
       lstyle = ':';
     end
+    color = 'c';
+    if obj.texist > 30
+      color = 'r';
+    elseif obj.texist > 10
+      color = 'y';
+    end
     rectangle('Position', [posx - width / 2 posy - height / 2 width height], 'LineStyle', lstyle, 'EdgeColor', color);
   end
   if numel(x) > 0
+    color = 'c';
     scale = 3;
     quiver(x, y, scale * u, scale * v, color);
   end

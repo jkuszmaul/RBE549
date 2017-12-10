@@ -70,7 +70,6 @@ toc
 %hist(res)
 %title('Histogram of residuals');
 
-Nfull
 %expVx = reshape(Afull(1:Nfull, :) * x, size(expVx));
 %expVy = reshape(Afull(Nfull+1:end, :) * x, size(expVy));
 expvals = predict(model, Afull);

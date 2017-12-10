@@ -4,10 +4,10 @@ function testFlow()
   opticFlow = opticalFlowHS;
   opticFlow = opticalFlowFarneback;
   [vidReader, speeds] = loadVids();
-  vidReader.CurrentTime = 10 * 60 + 48;
+  vidReader.CurrentTime = 10 * 60 + 46;
   i = 0;
-  objects = [];
-  while hasFrame(vidReader) && i < 30
+  objects = {};
+  while hasFrame(vidReader) && i < 150
     tic
     frameRGB = readFrame(vidReader);
     frameGray = rgb2gray(frameRGB);
@@ -18,7 +18,7 @@ function testFlow()
     toc
 
     tic
-    objects = findFlowObj(flow, objects, i == 0);
+    objects = findFlowObj(rgb2hsv(frameRGB), flow, objects, i == 0);
     toc
 
     tic
@@ -30,16 +30,14 @@ function testFlow()
     pause(0.25);
     toc
 
-    i = i + 1;
+    i = i + 1
   end
 
-  [expVx, expVy] = fitFlow(flow.Vx, flow.Vy, [300, 1920], [400, 1080]);
+  [expVx, expVy] = fitFlow(flow.Vx, flow.Vy, ceil(432 * [0.25, 1]), ceil(240 * [0.5, 1]));
   expFlow = opticalFlow(expVx, expVy);
 
   diffVx = flow.Vx - expVx;
   diffVy = flow.Vy - expVy;
-  diffVx(1:500, :) = 0;
-  diffVy(1:500, :) = 0;
   diffFlow = opticalFlow(diffVx, diffVy);
 
   figure;
@@ -91,7 +89,7 @@ function testFlow()
   title('Image');
   figure;
   hsv = rgb2hsv(frameRGB);
-  blues = reshape(hsv(:, [1:20 end-20:end], 1), 1, []);
+  blues = reshape(hsv(ceil(0.5 * end):end, [ceil(0.4 * end):end], 1), 1, []);
   blue = mean(blues)
   stdblue = std(blues) / 1
   isblue = (hsv(:, :, 1) > (blue + 3 * stdblue)) + (hsv(:, :, 1) < (blue - 3 * stdblue));

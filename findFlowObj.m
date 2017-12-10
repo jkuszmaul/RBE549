@@ -1,4 +1,4 @@
-function objects = findFlowObj(flow, prevObjects, isinit)
+function objects = findFlowObj(imgHSV, flow, prevObjects, isinit)
 % flow is an opticalFlow objects
 % objects is a (possibly zero-length) vector of
 % objects from the previous frame.
@@ -27,11 +27,16 @@ function objects = findFlowObj(flow, prevObjects, isinit)
 xscale = 1.0 / size(flow.Vx, 2);
 yscale = 1.0 / size(flow.Vy, 1);
 
+blueH = 0.5940
+blueres = (imgHSV(:, :, 1) - blueH).^2;
+
 % Update all the pre-existing objects using their
 % velocities, and figure out the highest objectlabel
 nextlabel = 0;
 for i = 1:numel(prevObjects)
   prevObjects{i}.pos = prevObjects{i}.pos + prevObjects{i}.vel;
+  prevObjects{i}.updated = 0;
+  prevObjects{i}.texist = prevObjects{i}.texist + 1;
   nextlabel = max(prevObjects{i}.label+1, nextlabel);
 end
 
@@ -53,22 +58,25 @@ diffVy = flow.Vy - nomVy;
 diffMag = sqrt(diffVx.^2 + diffVy.^2);
 
 tic
-threshold = 3.0; % Magnitude
+meanscale = mean([xscale yscale]);
+threshold = 0.002 / meanscale; % Magnitude
 
 bwthresh = useRegions .* diffMag > threshold;
-se = strel('disk', 5);
+se = strel('disk', ceil(0.004 / meanscale));
 bwthresh = imerode(bwthresh, se);
-se = strel('disk', 10);
+se = strel('disk', ceil(0.008 / meanscale));
 bwthresh = imdilate(bwthresh, se);
 
-minobjsize = 500;
+minobjsize = 2e-4;
 [labeled, nobj] = bwlabel(bwthresh);
 objremain = [];
 for i = 1:nobj
-  % Remove objects of insufficient size
+  % Remove objects of insufficient size or that are too blue
   object = labeled == i;
-  objsize = sum(object(:));
-  if objsize < minobjsize
+  objpixels = sum(object(:));
+  objsize = objpixels * yscale * xscale;
+  blueness = sum(sum(blueres(object))) / objpixels;
+  if objsize < minobjsize || blueness < 3e-3
     labeled(object) = 0;
   else
     objremain = [objremain i];
@@ -79,6 +87,7 @@ toc
 % Compute the velocity/bounding box for each measured
 % object
 objects = {};
+objects = prevObjects;
 for i = objremain
   object = labeled == i;
   xs = find(sum(object, 1));
@@ -96,37 +105,55 @@ for i = objremain
 
   obj.vel = [median(vxs); median(vys)];
 
+  if norm(obj.vel) < 1e-3 || max(obj.width, obj.height) > 0.5
+    % The object is moving too slowly relative to us
+    % or is to big to care about
+    continue
+  end
+
   obj.confidence = 0.2 + isinit * 0.5;
 
+  obj.updated = 1;
+  obj.texist = 0;
   obj.label = -1;
   % Go through previous objects and try to identify objects that go with this one
   usedi = [];
-  for i = 1:numel(prevObjects)
-    prev = prevObjects{i};
+  for i = 1:numel(objects)
+    prev = objects{i};
     dpos = obj.pos - prev.pos;
-    dvel = obj.vel - prev.vel;
+    speed = norm(obj.vel);
+    dspeed = speed - norm(prev.vel);
+    dang = angdiff(atan2(obj.vel(2), obj.vel(1)),...
+                   atan2(prev.vel(2), prev.vel(1)));
     dwidth = obj.width - prev.width;
     dheight = obj.height - prev.height;
+
     sizenorm = hypot(dwidth, dheight);
-    velnorm = norm(dvel) / norm(obj.vel);
+    speednorm = abs(dspeed) / abs(speed);
+    angnorm = abs(dang);
     posnorm = norm(dpos);
-    postol = 0.5 * hypot(obj.width, obj.height);
-    if sizenorm < 0.2 && velnorm < 0.8 && posnorm < postol
-      Kfilt = 0.9;
+    postol = 0.5 * hypot(max(obj.width, prev.width),...
+                         max(obj.height, prev.height));
+    if sizenorm < 0.2 && speednorm < 0.6 && angnorm < 1.5 && posnorm < postol
+      Kfilt = (obj.confidence - prev.confidence + 1) / 2;
       obj.pos = Kfilt * obj.pos + (1 - Kfilt) * prev.pos;
       obj.vel = Kfilt * obj.vel + (1 - Kfilt) * prev.vel;
       obj.width = Kfilt * obj.width + (1 - Kfilt) * prev.width;
       obj.height = Kfilt * obj.height + (1 - Kfilt) * prev.height;
+      obj.confidence = max(obj.confidence, prev.confidence);
+      obj.texist = max(obj.texist, prev.texist);
       % If we accumulate multiple previous objects,
       % throw out old labels
       obj.label = prev.label;
-      K = 0.2;
-      obj.confidence = (1 - K) * prev.confidence + K;
       usedi = [usedi i];
     end
   end
+  if numel(usedi) > 0
+    K = 0.3;
+    obj.confidence = (1 - K) * prev.confidence + K;
+  end
   % Get rid of assigned previous objects:
-  prevObjects(:, usedi) = [];
+  objects(:, usedi) = [];
 
   % If we couldn't associated with a previous object,
   % assign ourselves a label:
@@ -141,12 +168,17 @@ end
 % Go through the previous objects and lower their
 % confidences, throwing them out if the confidence
 % gets lowered too much.
-for i = 1:numel(prevObjects)
-  obj = prevObjects{i};
-  obj.confidence = obj.confidence - 0.1;
-  if obj.confidence > 0
-    objects = [objects obj];
+remove = [];
+for i = 1:numel(objects)
+  obj = objects{i};
+  if obj.updated == 0
+    obj.confidence = obj.confidence - 0.1;
+    if obj.confidence < 0
+      remove = [remove i];
+    end
   end
 end
+
+objects(:, remove) = [];
 
 end
