@@ -5,3 +5,5 @@ Set the start time/day in `parse_nmea.py` appropriately.
 
 Run
 `./parse_nmea.py some_file /path/to/nmea/logs.log`
+
+The existing CSVs are for the corresponding videos.
