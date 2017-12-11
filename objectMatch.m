@@ -56,7 +56,7 @@ remove = [];
 for i = 1:numel(prevObjects)
   obj = prevObjects{i};
   if obj.updated == 0
-    obj.confidence = obj.confidence - 0.1;
+    prevObjects{i}.confidence = obj.confidence - 0.1;
     if obj.confidence < 0
       remove = [remove i];
     end

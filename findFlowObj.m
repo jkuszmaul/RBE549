@@ -84,7 +84,7 @@ bwthresh = imerode(bwthresh, se);
 se = strel('disk', ceil(0.008 / meanscale));
 bwthresh = imdilate(bwthresh, se);
 
-minobjsize = 2e-4;
+minobjsize = 5e-5;
 [labeled, nobj] = bwlabel(bwthresh);
 %figure;
 %imshow(label2rgb(labeled, 'hsv', 'k', 'shuffle'))
