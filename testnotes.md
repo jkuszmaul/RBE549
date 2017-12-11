@@ -23,3 +23,10 @@ http://www.cse.iitm.ac.in/~vplab/courses/CV_DIP/PDF/Lect-Gabor_filt.pdf
 Seems to work okay, but not that great.  Adding several past frames and thresholding on value seems to work for the frame I tested on, but speed needs to be improved in the HSV reclassification module. 30 frames and 60 frames were tested. Both seem reasonable.
 
 ![temp_filt.jpg](temp_filt.jpg)
+
+# HSV Confidence filtering
+Get pretty good results with kmeans HSV "not-water" classification when all "not water" classes are multiplied by the squared distance to the "not water" class.Squaring the distance metric seems to suppress water ripple effects better and highlight things that might be obstacles.
+
+![hsv_confidence.jpg](hsv_confidence.jpg)
+![hsv_confidence2.jpg](hsv_confidence2.jpg)
+![hsv_confidence3.jpg](hsv_confidence3.jpg)
