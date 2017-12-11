@@ -6,8 +6,8 @@ function plotObjects(objects, imsize)
   v = [];
   for i = 1:numel(objects)
     obj = objects{i};
-    posx = ceil(obj.pos(1) * imsize(2));
-    posy = ceil(obj.pos(2) * imsize(1));
+    posx = ceil(obj.pos(1, end) * imsize(2));
+    posy = ceil(obj.pos(2, end) * imsize(1));
     width = obj.width * imsize(2);
     height = obj.height * imsize(1);
     velx = obj.vel(1) * imsize(2);

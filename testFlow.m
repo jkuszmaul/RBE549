@@ -11,7 +11,7 @@ function testFlow()
   objects = {};
   prevObjects = {};
   costs = [];
-  while hasFrame(vidReader) && i < 30
+  while hasFrame(vidReader) && i < 150
     tic
     frameRGB = readFrame(vidReader);
     frameGray = rgb2gray(frameRGB);

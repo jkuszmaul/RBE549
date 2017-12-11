@@ -34,10 +34,15 @@ blueres = (imgHSV(:, :, 1) - blueH).^2;
 % velocities, and figure out the highest objectlabel
 nextlabel = 0;
 for i = 1:numel(prevObjects)
-  prevObjects{i}.pos = prevObjects{i}.pos + prevObjects{i}.vel;
+  pobj = prevObjects{i};
+
+  prevObjects{i}.pos = [pobj.pos(:, end) + pobj.vel pobj.pos];
+  maxposes = 20;
+  prevObjects{i}.pos = prevObjects{i}.pos(:, 1:min([end maxposes]));
+
   prevObjects{i}.updated = 0;
-  prevObjects{i}.texist = prevObjects{i}.texist + 1;
-  nextlabel = max(prevObjects{i}.label+1, nextlabel);
+  prevObjects{i}.texist = pobj.texist + 1;
+  nextlabel = max(pobj.label+1, nextlabel);
 end
 
 xfitrange = ceil([0.2 1] / xscale);
@@ -84,10 +89,10 @@ for i = 1:nobj
 end
 toc
 
+
 % Compute the velocity/bounding box for each measured
 % object
 objects = {};
-objects = prevObjects;
 for i = objremain
   object = labeled == i;
   xs = find(sum(object, 1));
@@ -115,70 +120,13 @@ for i = objremain
 
   obj.updated = 1;
   obj.texist = 0;
-  obj.label = -1;
-  % Go through previous objects and try to identify objects that go with this one
-  usedi = [];
-  for i = 1:numel(objects)
-    prev = objects{i};
-    dpos = obj.pos - prev.pos;
-    speed = norm(obj.vel);
-    dspeed = speed - norm(prev.vel);
-    dang = angdiff(atan2(obj.vel(2), obj.vel(1)),...
-                   atan2(prev.vel(2), prev.vel(1)));
-    dwidth = obj.width - prev.width;
-    dheight = obj.height - prev.height;
 
-    sizenorm = hypot(dwidth, dheight);
-    speednorm = abs(dspeed) / abs(speed);
-    angnorm = abs(dang);
-    posnorm = norm(dpos);
-    postol = 0.5 * hypot(max(obj.width, prev.width),...
-                         max(obj.height, prev.height));
-    if sizenorm < 0.2 && speednorm < 0.6 && angnorm < 1.5 && posnorm < postol
-      Kfilt = (obj.confidence - prev.confidence + 1) / 2;
-      obj.pos = Kfilt * obj.pos + (1 - Kfilt) * prev.pos;
-      obj.vel = Kfilt * obj.vel + (1 - Kfilt) * prev.vel;
-      obj.width = Kfilt * obj.width + (1 - Kfilt) * prev.width;
-      obj.height = Kfilt * obj.height + (1 - Kfilt) * prev.height;
-      obj.confidence = max(obj.confidence, prev.confidence);
-      obj.texist = max(obj.texist, prev.texist);
-      % If we accumulate multiple previous objects,
-      % throw out old labels
-      obj.label = prev.label;
-      usedi = [usedi i];
-    end
-  end
-  if numel(usedi) > 0
-    K = 0.3;
-    obj.confidence = (1 - K) * prev.confidence + K;
-  end
-  % Get rid of assigned previous objects:
-  objects(:, usedi) = [];
-
-  % If we couldn't associated with a previous object,
-  % assign ourselves a label:
-  if obj.label == -1
-    obj.label = nextlabel;
-    nextlabel = nextlabel + 1;
-  end
+  obj.label = nextlabel;
+  nextlabel = nextlabel + 1;
 
   objects = [objects obj];
 end
 
-% Go through the previous objects and lower their
-% confidences, throwing them out if the confidence
-% gets lowered too much.
-remove = [];
-for i = 1:numel(objects)
-  obj = objects{i};
-  if obj.updated == 0
-    obj.confidence = obj.confidence - 0.1;
-    if obj.confidence < 0
-      remove = [remove i];
-    end
-  end
-end
-
-objects(:, remove) = [];
+objects = objectMatch(prevObjects, objects);
 
 end
