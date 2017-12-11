@@ -67,12 +67,16 @@ hsvConfidence = hsvFilt(imgHSV, clusters);
 
 tic
 meanscale = mean([xscale yscale]);
-threshold = 0.0025 / meanscale; % Magnitude
+threshold = 0.004 / meanscale; % Magnitude
 % Scale hsvConfidence to same area as threshold:
 hsvConfidence = hsvConfidence * 0.002 / meanscale;
+gradConf = imgradient(imgHSV(:, :, 1)) * 0.002 / meanscale;
 
-conf = hsvConfidence + diffMag;
-conf = conf .* wakeSuppress(imgHSV);
+conf = hsvConfidence + diffMag + gradConf;
+%figure;
+%imshow(wakeSuppress(imgHSV));
+%figure;
+%conf = conf + wakeSuppress(imgHSV) * 0.001 / meanscale;
 
 bwthresh = useRegions .* conf > threshold;
 se = strel('disk', ceil(0.004 / meanscale));
@@ -82,6 +86,9 @@ bwthresh = imdilate(bwthresh, se);
 
 minobjsize = 2e-4;
 [labeled, nobj] = bwlabel(bwthresh);
+%figure;
+%imshow(label2rgb(labeled, 'hsv', 'k', 'shuffle'))
+%figure;
 objremain = [];
 for i = 1:nobj
   % Remove objects of insufficient size or that are too blue

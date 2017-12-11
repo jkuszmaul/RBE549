@@ -13,7 +13,7 @@ function testFlow()
   prevObjects = {};
   costs = [];
   clusters = [];
-  while hasFrame(vidReader) && i < 30
+  while hasFrame(vidReader) && i < 150
     tic
     frameRGB = readFrame(vidReader);
     frameGray = rgb2gray(frameRGB);
@@ -53,7 +53,7 @@ function testFlow()
   sum10toend = sum(costs(10:end))
   return
 
-  [expVx, expVy] = fitFlow(flow.Vx, flow.Vy, ceil(432 * [0.25, 1]), ceil(240 * [0.5, 1]));
+  [expVx, expVy] = fitFlow(flow.Vx, flow.Vy, ceil(1920 * [0.25, 1]), ceil(1080 * [0.5, 1]));
   expFlow = opticalFlow(expVx, expVy);
 
   diffVx = flow.Vx - expVx;
@@ -63,7 +63,7 @@ function testFlow()
   figure;
   imshow(frameRGB)
   hold on
-  plot(flow,'DecimationFactor',[10 10],'ScaleFactor',3)
+  plot(flow,'DecimationFactor',[30 30],'ScaleFactor',5)
   q = findobj(gca,'type','Quiver');
   q.Color = 'r';
   hold off

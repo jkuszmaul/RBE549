@@ -10,3 +10,5 @@ Percentage of data used in fitlm & Cost For frames 10-30
 10% & 232.7312
 
 ``Fixing'' velocity-based adjustment appeared to have minimal effect
+
+Adding in hsvFilt improved costs down to 182.2
