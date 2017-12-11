@@ -22,4 +22,4 @@ http://www.cse.iitm.ac.in/~vplab/courses/CV_DIP/PDF/Lect-Gabor_filt.pdf
 # Temporal HSV filtering
 Seems to work okay, but not that great.  Adding several past frames and thresholding on value seems to work for the frame I tested on, but speed needs to be improved in the HSV reclassification module. 30 frames and 60 frames were tested. Both seem reasonable.
 
-![temp_filt.jpg](temp_filt.jp)
+![temp_filt.jpg](temp_filt.jpg)
