@@ -63,6 +63,12 @@ diffVx = flow.Vx - nomVx;
 diffVy = flow.Vy - nomVy;
 diffMag = sqrt(diffVx.^2 + diffVy.^2);
 
+% Account for the fact that things in the center of the
+% image are far away and will appear to move more slowly
+diffMult = ones(size(diffMag));
+diffMult(floor(0.3 * end):ceil(0.7 * end), floor(0.3 * end):ceil(0.7 * end)) = 2.5;
+diffMag = diffMag .* diffMult;
+
 hsvConfidence = hsvFilt(imgHSV, clusters);
 
 tic
