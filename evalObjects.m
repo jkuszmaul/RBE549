@@ -44,10 +44,10 @@ function [cost] = evalObjects(image, objects, prevObjects)
     obj = objects{i};
     previ = find(prevlabels == obj.label);
 
-    minxi = max([1 ceil((obj.pos(1, end) - obj.width / 2) / xscale)]);
-    maxxi = min([size(hue, 2) ceil((obj.pos(1, end) + obj.width / 2) / xscale)]);
-    minyi = max([1 ceil((obj.pos(2, end) - obj.height / 2) / yscale)]);
-    maxyi = min([size(hue, 1) ceil((obj.pos(2, end) + obj.height / 2) / yscale)]);
+    minxi = max([1 ceil((obj.pos(1, 1) - obj.width / 2) / xscale)]);
+    maxxi = min([size(hue, 2) ceil((obj.pos(1, 1) + obj.width / 2) / xscale)]);
+    minyi = max([1 ceil((obj.pos(2, 1) - obj.height / 2) / yscale)]);
+    maxyi = min([size(hue, 1) ceil((obj.pos(2, 1) + obj.height / 2) / yscale)]);
     coveredarea(minyi:maxyi, minxi:maxxi) = 1;
 
     if numel(previ) == 0
@@ -60,7 +60,7 @@ function [cost] = evalObjects(image, objects, prevObjects)
     % to be able to actually use it as a reference.
     prevObj = prevObjects{previ};
     avgvel = mean([prevObj.vel obj.vel], 2);
-    dpos = (obj.pos(:, end) - obj.pos(:, 1)) / (size(obj.pos, 2) - 1);
+    dpos = (obj.pos(:, 1) - obj.pos(:, end)) / (size(obj.pos, 2) - 1);
     verr = norm(avgvel - dpos);
 
     velcost = velcost + verr;

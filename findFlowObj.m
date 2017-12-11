@@ -37,7 +37,7 @@ nextlabel = 0;
 for i = 1:numel(prevObjects)
   pobj = prevObjects{i};
 
-  prevObjects{i}.pos = [pobj.pos(:, end) + pobj.vel pobj.pos];
+  prevObjects{i}.pos = [pobj.pos(:, 1) + pobj.vel pobj.pos];
   maxposes = 20;
   prevObjects{i}.pos = prevObjects{i}.pos(:, 1:min([end maxposes]));
 
@@ -70,13 +70,14 @@ meanscale = mean([xscale yscale]);
 threshold = 0.004 / meanscale; % Magnitude
 % Scale hsvConfidence to same area as threshold:
 hsvConfidence = hsvConfidence * 0.002 / meanscale;
-gradConf = imgradient(imgHSV(:, :, 1)) * 0.002 / meanscale;
+%gradConf = imgradient(imgHSV(:, :, 1)) * 0.002 / meanscale;
 
-conf = hsvConfidence + diffMag + gradConf;
+conf = hsvConfidence + diffMag;% + gradConf;
+
 %figure;
-%imshow(wakeSuppress(imgHSV));
+%imagesc(conf, [0 2 * threshold]);
+%colorbar
 %figure;
-%conf = conf + wakeSuppress(imgHSV) * 0.001 / meanscale;
 
 bwthresh = useRegions .* conf > threshold;
 se = strel('disk', ceil(0.004 / meanscale));
@@ -86,9 +87,6 @@ bwthresh = imdilate(bwthresh, se);
 
 minobjsize = 5e-5;
 [labeled, nobj] = bwlabel(bwthresh);
-%figure;
-%imshow(label2rgb(labeled, 'hsv', 'k', 'shuffle'))
-%figure;
 objremain = [];
 for i = 1:nobj
   % Remove objects of insufficient size or that are too blue

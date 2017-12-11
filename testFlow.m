@@ -4,7 +4,7 @@ function testFlow()
   opticFlow = opticalFlowHS;
   opticFlow = opticalFlowFarneback();
   [vidReader, speeds] = loadVids();
-  vidReader.CurrentTime = 10 * 60 + 46; % For GP060042 boat
+  vidReader.CurrentTime = 10 * 60 + 45; % For GP060042 boat
 %  vidReader.CurrentTime = 6 * 60 + 30; % For GP010041 kayak
 %  vidReader.CurrentTime = 0 * 60 + 5; % For GP010041 start
 %  vidReader.CurrentTime = 2 * 60 + 17; % For GP020042 boat
@@ -98,6 +98,7 @@ function testFlow()
   figure;
   imagesc(diffFlow.Magnitude, [0 15]);
   title('Diff Magnitude');
+  colormap;
   figure;
   imagesc(flow.Magnitude, [0 15]);
   title('Magnitude');

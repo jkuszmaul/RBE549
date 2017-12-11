@@ -95,7 +95,7 @@ function [obj] = mergeobjects(objects)
       nobj.width = nobj.width * 0.75;
       nobj.height = nobj.height * 0.75;
     end
-    npos = nobj.pos(:, end);
+    npos = nobj.pos(:, 1);
     minx = min([minx npos(1) - nobj.width / 2]);
     maxx = max([maxx npos(1) + nobj.width / 2]);
     miny = min([miny npos(2) - nobj.height / 2]);
@@ -116,7 +116,7 @@ function [obj] = mergeobjects(objects)
     Ncur = size(pastposes, 2);
     pastposes(:, Ncur+1:Nnew) = zeros(2, Nnew - Ncur);
     npastposes(:, Ncur+1:Nnew) = zeros(2, Nnew - Ncur);
-    pastposes(:, 1:Nnew) = pastposes(:, 1:Nnew) + nobj.pos(:, 1:end-1);
+    pastposes(:, 1:Nnew) = pastposes(:, 1:Nnew) + nobj.pos(:, 2:end);
     npastposes(:, 1:Nnew) = npastposes(:, 1:Nnew) + 1;
   end
   obj.vel = obj.vel / area;
@@ -127,7 +127,7 @@ function [obj] = mergeobjects(objects)
   % Calculate new current position and size from min/max x/y
   newpos = mean([minx maxx;
                  miny maxy], 2);
-  obj.pos = [pastposes newpos];
+  obj.pos = [newpos pastposes];
   obj.width = maxx - minx;
   obj.height = maxy - miny;
 
@@ -142,9 +142,9 @@ function [obj] = mergeobjects(objects)
   % a certain threshold gets a constant knock?
   nposes = size(obj.pos, 2);
   if nposes > 10
-    pos = obj.pos(:, end)
+    pos = obj.pos(:, 1)
     vel = obj.vel
-    dpos = (obj.pos(:, end) - obj.pos(:, 1)) / (nposes - 1);
+    dpos = (obj.pos(:, 1) - obj.pos(:, end)) / (nposes - 1);
     normvel = norm(dpos - obj.vel) / max(norm(obj.vel), norm(dpos))
     change = 0.0;
     if normvel > 1.2
