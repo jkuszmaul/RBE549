@@ -1,3 +1,12 @@
 Check out end of sec. 14.1 of text for some references on optical flow.
 
 GP060043.MP4 (10/21) contains some nice rocking of the boat
+
+Results:
+
+Before fixing velocity-based confidence adjustment, I had
+Percentage of data used in fitlm & Cost For frames 10-30
+100% & 224.9484
+10% & 232.7312
+
+``Fixing'' velocity-based adjustment appeared to have minimal effect

@@ -146,8 +146,13 @@ function [obj] = mergeobjects(objects)
     vel = obj.vel
     dpos = (obj.pos(:, end) - obj.pos(:, 1)) / (nposes - 1);
     normvel = norm(dpos - obj.vel) / max(norm(obj.vel), norm(dpos))
-    scale = 0.8 / normvel;
-    obj.confidence = min(obj.confidence * scale, 1);
+    change = 0.0;
+    if normvel > 1.2
+      change = -0.2;
+    elseif normvel < 0.8
+      change = 0.0;
+    end
+    obj.confidence = min(obj.confidence + change, 1);
   end
 end
 

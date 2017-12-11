@@ -47,7 +47,7 @@ Vy = limrange(Vy);
 pfx = pfx(:);
 pfy = pfy(:);
 
-useobv = 1:3:numel(pfx);
+useobv = 1:10:numel(pfx);
 pfx = pfx(useobv);
 pfy = pfy(useobv);
 Vx = Vx(useobv);

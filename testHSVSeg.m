@@ -1,3 +1,5 @@
+close all;
+
 test_img = im2double(imread('./data/vlcsnap-boat.png'));
 %test_img = im2double(imread('./data/vlcsnap-boat-far.png'));
 %test_img = im2double(imread('./data/vlcsnap-buoy.png'));
@@ -44,9 +46,12 @@ subplot(2,1,2);
 imagesc(class_img);
 
 %% See what entropy filtering does
+tic
 en_img = entropyfilt(test_img_gray);
 std_img = stdfilt(test_img_gray);
 range_img = rangefilt(test_img_gray);
+disp 'Entropy Filtering time'
+toc
 
 figure();
 subplot(2,2,1);
@@ -71,6 +76,7 @@ subplot(2,2,4);
 imagesc(imgaussfilt(comb, 8));
 
 %% Test Gabor Filter
+tic
 wavelengthMin = 4/sqrt(2);
 wavelengthMax = hypot(im_size(1), im_size(2));
 n = floor(log2(wavelengthMax/wavelengthMin));
@@ -81,6 +87,8 @@ orientation = 0:deltaTheta:(180-deltaTheta);
 
 g = gabor(wavelength, orientation);
 gabormags = imgaborfilt(test_img_gray_small, g);
+disp 'Gabor TIme'
+toc
 
 %% Show the gabor images
 num_filts = size(gabormags, 3);
@@ -97,7 +105,7 @@ numCols = size(test_img_gray_small, 2);
 for i = 1:length(g)
     sigma = 0.5*g(i).Wavelength;
     K = 3;
-    gabormag(:,:,i) = imgaussfilt(gabormag(:,:,i),K*sigma); 
+    gabormag(:,:,i) = imgaussfilt(gabormag(:,:,i),K*sigma);
 end
 
 X = 1:numCols;
@@ -147,7 +155,7 @@ while hasFrame(vidReader) && i < 60
     toc
     all_frames(:,i+1) = classes;
     %imshow(reshape(classes, frame_size(1)/2, frame_size(2)/2)./2);
-    i = i+1; 
+    i = i+1;
     %pause(0.07);
 end
 
