@@ -116,3 +116,49 @@ coeff = pca(X);
 feature2DImage = reshape(X*coeff(:,1),numRows,numCols);
 figure
 imshow(feature2DImage,[])
+
+%% Test on Video
+%vidReader = VideoReader('./data/boat.mp4');
+vidReader = VideoReader('./data/GP060042.MP4');
+vidReader.CurrentTime = 10 * 60 + 48;
+
+% Do a kmeans cluster on the first image for segmentation
+first_frame = readFrame(vidReader);
+hsv_frame = rgb2hsv(first_frame);
+frame_size = size(first_frame);
+[classes clusters] = kmeans([reshape(hsv_frame(:,:,1),frame_size(1)*frame_size(2),1) ...
+                             reshape(hsv_frame(:,:,2),frame_size(1)*frame_size(2),1) ...
+                             reshape(hsv_frame(:,:,3),frame_size(1)*frame_size(2),1)], 2);
+% Figure out which class is the water by counting the number of classes in
+% the bottom half of the frame
+class_frame = reshape(classes, frame_size(1), frame_size(2));
+bottom_classes = reshape(class_frame(end/2:end,:),size(class_frame(end/2:end,:),1)*size(class_frame(end/2:end,:),2),1);
+class1_count = sum(bottom_classes == 1);
+class2_count = sum(bottom_classes == 2);
+[num, water_class] = max([class1_count, class2_count]);
+i = 0;
+figure();
+all_frames = zeros(frame_size(1)/2*frame_size(2)/2, 60);
+while hasFrame(vidReader) && i < 60
+    frameRGB = readFrame(vidReader);
+    % Calculate the classified image
+    tic
+    classes = hsvClassify(rgb2hsv(imresize(frameRGB,0.5)), clusters);
+    toc
+    all_frames(:,i+1) = classes;
+    %imshow(reshape(classes, frame_size(1)/2, frame_size(2)/2)./2);
+    i = i+1; 
+    %pause(0.07);
+end
+
+%% Test temporal filtering
+figure();
+temp_filt_img = reshape(sum(all_frames, 2)./(2*60), frame_size(1)/2, frame_size(2)/2);
+subplot(2,2,1);
+imshow(temp_filt_img); title('Temporal class sum (60 frames)');
+subplot(2,2,2);
+imshow(temp_filt_img > 0.5+(0.5/2)); title('>50%');
+subplot(2,2,3);
+imshow(temp_filt_img > 0.5+(0.75/2)); title('>75%');
+subplot(2,2,4);
+imshow(temp_filt_img > 0.5+(0.25/2)); title('>25%');
