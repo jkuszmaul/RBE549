@@ -129,25 +129,21 @@ imshow(feature2DImage,[])
 %vidReader = VideoReader('./data/boat.mp4');
 vidReader = VideoReader('./data/GP060042.MP4');
 vidReader.CurrentTime = 10 * 60 + 48;
+%vidReader.CurrentTime = 14*60;
 
 % Do a kmeans cluster on the first image for segmentation
-first_frame = readFrame(vidReader);
-hsv_frame = rgb2hsv(first_frame);
-frame_size = size(first_frame);
-[classes clusters] = kmeans([reshape(hsv_frame(:,:,1),frame_size(1)*frame_size(2),1) ...
-                             reshape(hsv_frame(:,:,2),frame_size(1)*frame_size(2),1) ...
-                             reshape(hsv_frame(:,:,3),frame_size(1)*frame_size(2),1)], 2);
-% Figure out which class is the water by counting the number of classes in
-% the bottom half of the frame
-class_frame = reshape(classes, frame_size(1), frame_size(2));
-bottom_classes = reshape(class_frame(end/2:end,:),size(class_frame(end/2:end,:),1)*size(class_frame(end/2:end,:),2),1);
-class1_count = sum(bottom_classes == 1);
-class2_count = sum(bottom_classes == 2);
-[num, water_class] = max([class1_count, class2_count]);
+[clusters, class_img] = getHSVClusters(readFrame(vidReader));
+
+% Show the classification results
+figure();
+imagesc(class_img);
+
+%% Display a few frames
 i = 0;
 figure();
-all_frames = zeros(frame_size(1)/2*frame_size(2)/2, 60);
-while hasFrame(vidReader) && i < 60
+num_frames = 30;
+all_frames = zeros(frame_size(1)/2*frame_size(2)/2, num_frames);
+while hasFrame(vidReader) && i < num_frames
     frameRGB = readFrame(vidReader);
     % Calculate the classified image
     tic
@@ -161,7 +157,7 @@ end
 
 %% Test temporal filtering
 figure();
-temp_filt_img = reshape(sum(all_frames, 2)./(2*60), frame_size(1)/2, frame_size(2)/2);
+temp_filt_img = reshape(sum(all_frames, 2)./(2*num_frames), frame_size(1)/2, frame_size(2)/2);
 subplot(2,2,1);
 imshow(temp_filt_img); title('Temporal class sum (60 frames)');
 subplot(2,2,2);

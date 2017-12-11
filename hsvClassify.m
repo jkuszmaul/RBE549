@@ -1,4 +1,4 @@
-function [classes] = hsvClassify(hsv_img, clusters)
+function [classes, dists] = hsvClassify(hsv_img, clusters)
     img_size = size(hsv_img);
     class_dists = zeros(img_size(1)*img_size(2), 2);
     % Linearize the image
