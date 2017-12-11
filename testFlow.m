@@ -5,18 +5,22 @@ function testFlow()
   opticFlow = opticalFlowFarneback();
   [vidReader, speeds] = loadVids();
   vidReader.CurrentTime = 10 * 60 + 46; % For GP060042 boat
-  vidReader.CurrentTime = 6 * 60 + 30; % For GP010041 kayak
+%  vidReader.CurrentTime = 6 * 60 + 30; % For GP010041 kayak
 %  vidReader.CurrentTime = 0 * 60 + 5; % For GP010041 start
-  vidReader.CurrentTime = 2 * 60 + 17; % For GP020042 boat
+%  vidReader.CurrentTime = 2 * 60 + 17; % For GP020042 boat
   i = 0;
   objects = {};
   prevObjects = {};
   costs = [];
+  clusters = [];
   while hasFrame(vidReader) && i < 30
     tic
     frameRGB = readFrame(vidReader);
     frameGray = rgb2gray(frameRGB);
     toc
+    if numel(clusters) == 0
+      clusters = getHSVClusters(frameRGB);
+    end
 
     tic
     flow = estimateFlow(opticFlow,frameGray);
@@ -25,7 +29,7 @@ function testFlow()
     frameHSV = rgb2hsv(frameRGB);
 
     tic
-    objects = findFlowObj(frameHSV, flow, objects, i == 0);
+    objects = findFlowObj(frameHSV, flow, objects, clusters, i == 0);
     toc
 
     tic

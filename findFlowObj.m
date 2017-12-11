@@ -1,7 +1,8 @@
-function objects = findFlowObj(imgHSV, flow, prevObjects, isinit)
+function objects = findFlowObj(imgHSV, flow, prevObjects, clusters, isinit)
 % flow is an opticalFlow objects
 % objects is a (possibly zero-length) vector of
 % objects from the previous frame.
+% clusters: clusters from getHSVClusters
 % isinit: Whether or not this is the first
 % iteration (i.e., whether or  not we should
 % pay attention to the fact that we may have zero
@@ -62,11 +63,18 @@ diffVx = flow.Vx - nomVx;
 diffVy = flow.Vy - nomVy;
 diffMag = sqrt(diffVx.^2 + diffVy.^2);
 
+hsvConfidence = hsvFilt(imgHSV, clusters);
+
 tic
 meanscale = mean([xscale yscale]);
-threshold = 0.002 / meanscale; % Magnitude
+threshold = 0.0025 / meanscale; % Magnitude
+% Scale hsvConfidence to same area as threshold:
+hsvConfidence = hsvConfidence * 0.002 / meanscale;
 
-bwthresh = useRegions .* diffMag > threshold;
+conf = hsvConfidence + diffMag;
+conf = conf .* wakeSuppress(imgHSV);
+
+bwthresh = useRegions .* conf > threshold;
 se = strel('disk', ceil(0.004 / meanscale));
 bwthresh = imerode(bwthresh, se);
 se = strel('disk', ceil(0.008 / meanscale));
