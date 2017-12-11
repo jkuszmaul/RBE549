@@ -143,6 +143,40 @@ while hasFrame(vidReader) && i < num_frames
     pause(0.02);
 end
 
+%% Test Surf
+figure();
+i=0;
+vidReader.CurrentTime = 10 * 60 + 48;
+num_frames = 30;
+while hasFrame(vidReader) && i < num_frames
+    frameRGB = readFrame(vidReader);
+    % Calculate the classified image
+    disp('plot');
+    hsv_frame = rgb2hsv(frameRGB);
+    imshow(hsv_frame(:,:,1)); hold on;
+    plot(detectSURFFeatures(hsv_frame(:,:,1)));
+    hold off;
+    i = i+1; 
+    pause(0.02);
+end
+disp('done');
+
+%% Test Wake suppress
+figure();
+i=0;
+vidReader.CurrentTime = 10 * 60 + 48;
+num_frames = 2;
+while hasFrame(vidReader) && i < num_frames
+    frameRGB = readFrame(vidReader);
+    % Calculate the classified image
+    disp('plot');
+    imagesc((1./nthroot(entropyfilt(rgb2gray(frameRGB)),6)).*wakeSuppress(frameRGB));
+    %imagesc(1-wakeSuppress(frameRGB));
+    i = i+1; 
+    pause(0.02);
+end
+disp('done');
+
 %% Test temporal filtering
 figure();
 temp_filt_img = reshape(sum(all_frames, 2)./(2*num_frames), frame_size(1)/2, frame_size(2)/2);
