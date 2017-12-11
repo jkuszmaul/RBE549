@@ -124,37 +124,13 @@ vidReader.CurrentTime = 10 * 60 + 48;
 %vidReader.CurrentTime = 14*60;
 
 % Do a kmeans cluster on the first image for segmentation
-first_frame = readFrame(vidReader);
-hsv_frame = rgb2hsv(first_frame);
-frame_size = size(first_frame);
-[classes clusters] = kmeans([reshape(hsv_frame(:,:,1),frame_size(1)*frame_size(2),1) ...
-                             reshape(hsv_frame(:,:,2),frame_size(1)*frame_size(2),1) ...
-                             reshape(hsv_frame(:,:,3),frame_size(1)*frame_size(2),1)], 2);
-% Figure out which class is the water by counting the number of classes in
-% the bottom half of the frame
-class_frame = reshape(classes, frame_size(1), frame_size(2));
-bottom_classes = reshape(class_frame(end/2:end,:),size(class_frame(end/2:end,:),1)*size(class_frame(end/2:end,:),2),1);
-class1_count = sum(bottom_classes == 1);
-class2_count = sum(bottom_classes == 2);
-[num, water_class] = max([class1_count, class2_count]);
-
-% Force the water class to be 1
-if water_class==2
-    disp('swapping');
-    water_class==1;
-    classes(classes==2) = 3;
-    classes(classes==1) = 2;
-    classes(classes==3) = 1;
-    tmp = clusters(2,:);
-    clusters(2,:) = clusters(1,:);
-    clusters(1,:) = tmp;
-end
+[clusters, class_img] = getHSVClusters(readFrame(vidReader));
 
 % Show the classification results
 figure();
-imagesc(reshape(classes, frame_size(1), frame_size(2)));
+imagesc(class_img);
 
-%%
+%% Display a few frames
 i = 0;
 figure();
 num_frames = 30;
@@ -162,14 +138,9 @@ all_frames = zeros(frame_size(1)/2*frame_size(2)/2, num_frames);
 while hasFrame(vidReader) && i < num_frames
     frameRGB = readFrame(vidReader);
     % Calculate the classified image
-    tmp = rgb2hsv(imresize(frameRGB,0.5));
-    [classes, dists] = hsvClassify(rgb2hsv(imresize(frameRGB,0.5)), clusters);
-    all_frames(:,i+1) = classes;
-    tmp_img = reshape((classes==2).*(dists.^2), frame_size(1)/2, frame_size(2)/2);
-    %tmp_img(1:end/2, :) = 0;
-    imagesc(tmp_img);
+    imagesc(hsvFilt(frameRGB, clusters));
     i = i+1; 
-    %pause(0.02);
+    pause(0.02);
 end
 
 %% Test temporal filtering
