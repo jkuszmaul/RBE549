@@ -2,6 +2,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage{pdfpages}
 \usepackage{minted}
+\usepackage{amsmath}
+\usepackage{bm}
 \usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{graphicx}
@@ -99,11 +101,157 @@ Overall, the object pipeline is as follows:
 
 \section{Optical Flow}
 
+\subsection{Underlying Algorithm}
+
 For the underlying optical flow algorithm, we use Farneback's
 \cite{farneback2003} which is accessible in matlab as
 \texttt{opticalFlowFarneback}.
 
 As an overview, the way that this optical flow algorithm works is to
+approximate the neighborhood of every pixel as some quadratic function
+$f(\mathbf{x}) = \mathbf{x}^T \mathbf{A} \mathbf{x} + \mathbf{b}^T \mathbf{x} + c$
+where $\mathbf{x}$ is the location around any given pixel. By estimating these
+polynomials about any given pixel between two frames, we can try to estimate how
+much the image has moved in the neighborhood of that pixel. Actual
+implementations of the algorithm contain some additional filtering/smoothing and
+function on multiple levels of an image pyramid to estimate optical flow at
+different scales. You can also adjust how much of the neighborhood around a
+pixel is used to estimate the polynomial, and various other optimizations.
+
+In practice, we just used the default options to the matlab method (which uses
+a 3-level pyramid scaling image size by a factor of 2, with a 5-pixel
+neighborhood size and a Gaussian filter on the output of size 15x15), as these
+options tended to produce good results.
+
+\subsection{Expected Flow}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.7\textwidth]{example_flow.png}
+\caption{Optical Flow output (shown only for every few pixels) between two
+frames}
+\label{fig:example_flow}
+\end{figure}
+
+In Figure \ref{fig:example_flow} we show the output of
+\texttt{opticalFlowFarneback} on a given pair of frames. The most immediate need
+in this image is to try and account for the field of flow produced along the
+water. This corresponds to the real movement of the plane of the water relative
+to the boat. We can attempt to model this with the following assumptions:
+\begin{itemize}
+\item That the camera is pointed straight and level
+\item There is no substantial roll or yaw angular rates of turn occurring
+\item The camera is an ideal pinhole camera with no substantial lens distortions
+      or the such
+\item There is no sideways relative velocity between the boat and the water
+\end{itemize}
+
+We can define the following variables:
+
+\begin{tabular}{c|c}
+Name & Description \\ \hline
+$h$ & Height of the camera above the water \\
+$v_h$ & The current upwards velocity of the camera \\
+$v_b$ & Forwards velocity of the boat relative to the water \\
+$x_b, y_b$ & Position coordinates in the boat frame \\
+$x_f, y_f$ & X and Y position in the 2-D image frame \\
+$\dot{x}_f, \dot{y}_f$ & The expected optical flow (derivatives of $x_f, y_f$)
+\\
+$K$ & Some constant describing the field of view of the camera \\
+\end{tabular}
+
+The boat frame has an origin immediately below the camera on the surface of
+the water, is attached to the boat, has an x-axis pointing straight forwards,
+a y-axis pointing straight port (left in the camera view) and a z-axis pointing
+straight upwards, with the camera at position $(0, 0, h)$ in this frame.
+
+The image frame is scaled so that the center of the image is the origin and
+the image is exactly 1 unit tall, with the x-axis being the side-to-side axis
+and the y-axis being up-and-down.
+
+Strictly speaking $K = 2\sin\frac\theta2$ if the total vertical field-of-view
+of the camera is $\theta$, but we end up estimating it anyways.
+
+These give us:
+
+\begin{align*}
+x_f =& \frac{-y_b}{Kx_b} \\
+y_f =& \frac{-h}{Kx_b} \\
+\dot{x}_f =& \frac{-y_bv_b}{Kx^2_b} \\
+\dot{y}_f =& -\frac{1}{Kx_b}(\frac{hv_b}{x_b} + v_h) \\
+\end{align*}
+
+And solving for $x_b, y_b$ in terms of $x_f, y_f$ and then substituting in to
+give us the expected optical flow at any given image coordinate $x_f, y_f$ we
+get:
+
+\begin{align}
+\dot{x}_f =& \frac{-v_bKx_fy_f}{h} \\
+\dot{y}_f =& \frac{v_hy_f - Kv_by_f^2}{h}
+\end{align}
+
+If we ignore the actual values of the constants and just turn them into
+something to be estimated, while also adding in a parameter where we
+assume that $y_f$ may not be perfectly centered, we can turn this into a
+linear parameter estimation problem as:
+
+\begin{align}
+\dot{x}_f =& ax_fy_f + bx_f \\
+\dot{y}_f =& cy_f^2 + dy_f + e
+\end{align}
+
+To actually perform the least-squares fitting we use \texttt{fitlm} in
+matlab. Normally, this just uses a normal least-squares estimation
+(similar to doing \texttt{A \ b}), but adds some additional
+options. We tried to make use of these options, including a outlier
+rejection algorithm, but the effects were minimal and substantially
+increased the processing time required to execute the code.
+
+\begin{figure}
+\centering
+\includegraphics[width=0.6\textwidth]{diff_magnitude}
+\caption{Difference between the measured and modelled optical flow.
+         Dark blue means perfect match, bright yellow means a poor match.}
+\label{fig:diff_magnitude}
+\end{figure}
+
+When we compare the expected magnitude of the optical flow to the
+actual magnitude of the optical flow in Figure \ref{fig:diff_magnitude}
+(this is the same image as Figure \ref{fig:example_flow}),
+in which you can see a few features:
+\begin{itemize}
+\item The boat in the left half of the image shows up as a cyan blob, distinct
+      from the water around it.
+\item The curved metal in the bottom left screws with the optical flow
+      algorithm, causing substantial variation from the model.
+\item In the bottom right, due to either lens distortion or hard to measure
+      waves, the optical flow varies substantially from the model.
+\end{itemize}
+
+As a result of the poor results in the very bottom of the image and in the
+area around the metal bar, we completely ignore and filter out these regions,
+as they are relatively unlikely to contain obstacles (or if they did, our
+boat would be running them over anyways).
+
+We also note that in general objects appearing more distantly in the center of
+the image will be hard to identify, as the absolute value of the difference
+in magnitude from the modelled magnitude will be low (because we are looking
+at optical flow in the image, not real life, so far away objects have
+low velocities in the image), and so simple thresholds will not work well.
+We experimented with reducing the required threshold in the center of the image,
+which did improve tracking.
+
+It is also the case that any stationary, low-lying obstacles (e.g. buoys)
+will be indistinguishable from the water and so will not be detected
+by this half of the filtering.
+
+\section{Blob Detection and Filtering}
+
+\section{Object Matching}
+
+\section{Results}
+
+\section{Future Results}
 
 \section{Evaluation Section from Proposal}
 
