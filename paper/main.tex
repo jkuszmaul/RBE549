@@ -109,35 +109,90 @@ Overall, the object pipeline is as follows:
 In the first part of the pipeline, we look at individual images and attempt to provide a pixel level detection of potential objects to track.  This step of the pipeline provides a confidence value for each pixel in the frame for confidence that the pixels is an object to track.
 The image is converted to HSV color space from the original RGB colorspace since this gives us better segmentation results. The HSV space has better color properties for segmentation since the water is typical near one particular color, but can have variations in brightness.  This also allows the segmentation to easily segment non-water pixels by the hue value, since the water tends to be near the blue and green hue values in our test images.
 
-\subsection{Naiive K-Means Classifier}
-We initially started with a basic two-class k-means classifier in order to observe how well it would perform.  The classifier was trained on the first image in the video sequence, and the l2 distance to the two cluster centers was used to classify each pixel in subsequent frames.  Surprisingly enough, the 2-class k-means classifier worked relatively robustly on the videos that we provided the algorithm, as show in figure \ref{fig:kmeans}.  The water pixels are mostly labeled as one class, and pixels that not water are mostly labeled as another class with a little bit of misclassification noise.  The boat and it's wake are clearly labeled as potential obstacles to track, which is what we want. The land areas are labeled as water pixels, but for our implementation we want to ignore tracking the land anyways. There is a slight bit of noise in the water reflections towards the right side of figure \ref{fig:kmeans}, but this naiive method still provides very useful information. \\
-\newline
-Kmeans does not always associate the same class identifier with the water and non-water pixels each time, so we must perform an intermediary step to detect which class identifier it associates with water pixels.  To do so, we find the number of pixels in each class in the bottom half of the image, and use the sums to vote for which class is associated with water pixels. This assumes that the boat is upright, and that a majority of the pixels in the bottom half of the image are water, and holds true for all of the cases we observed.  If the water class ID is not what was expected, the cluster centers are swapped so that the water class ID is always a known value.
+\subsection{Naive K-Means Classifier}
+We initially started with a basic two-class k-means classifier in order to
+observe how well it would perform.  The classifier was trained on the first
+image in the video sequence, and the l2 distance to the two cluster centers was
+used to classify each pixel in subsequent frames.  Surprisingly enough, the
+2-class k-means classifier worked relatively robustly on the videos that we
+provided the algorithm, as show in figure \ref{fig:kmeans}.  The water pixels
+are mostly labeled as one class, and pixels that not water are mostly labeled as
+another class with a little bit of misclassification noise.  The boat and it's
+wake are clearly labeled as potential obstacles to track, which is what we want.
+The land areas are labeled as water pixels, but for our implementation we want
+to ignore tracking the land anyways. There is a slight bit of noise in the water
+reflections towards the right side of figure \ref{fig:kmeans}, but this naive
+method still provides very useful information.
+
+Kmeans does not always associate the same class identifier with the water and
+non-water pixels each time, so we must perform an intermediary step to detect
+which class identifier it associates with water pixels.  To do so, we find the
+number of pixels in each class in the bottom half of the image, and use the sums
+to vote for which class is associated with water pixels. This assumes that the
+boat is upright, and that a majority of the pixels in the bottom half of the
+image are water, and holds true for all of the cases we observed.  If the water
+class ID is not what was expected, the cluster centers are swapped so that the
+water class ID is always a known value.
 
 \begin{figure}
 \label{fig:kmeans}
 \includegraphics[width=7.8cm]{hsv_kmeans2_orig}
 \includegraphics[width=8.5cm]{hsv_kmeans2_result}
 \centering
-\caption{Naiive K-Means Classifier Results}
+\caption{Naive K-Means Classifier Results}
 \end{figure}
 
 \subsection{Wave Reflection Suppression}
-Although there is some noise in the classification results, the k-means classifier does a decent job of selecting pixels that are areas of water. In order to suppress false detections as seen in the right side of the classifier results in figure \ref{fig:kmeans}, we look at the distance values between the pixel's HSV value and the water pixel cluster center to estimate how similar the pixel is to the water class.  The wave reflections observed in figure \ref{fig:kmeans} tend to very close to the cluster center while true obstacle pixels tend to be further away from the cluster center.  By using this measure as a confidence value, we can suppress regions that are more likely to be water, and emphasize regions that are more likely to be objects to track.  Using the distance metric directly provided decent results, but squaring the distance metric value provided significantly better suppression of water and emphasis of potential objects.  The squared value was then used as a direct measure of confidence that each pixel was a potential object to track.
+Although there is some noise in the classification results, the k-means
+classifier does a decent job of selecting pixels that are areas of water. In
+order to suppress false detections as seen in the right side of the classifier
+results in figure \ref{fig:kmeans}, we look at the distance values between the
+pixel's HSV value and the water pixel cluster center to estimate how similar the
+pixel is to the water class.  The wave reflections observed in figure
+\ref{fig:kmeans} tend to very close to the cluster center while true obstacle
+pixels tend to be further away from the cluster center.  By using this measure
+as a confidence value, we can suppress regions that are more likely to be water,
+and emphasize regions that are more likely to be objects to track.  Using the
+distance metric directly provided decent results, but squaring the distance
+metric value provided significantly better suppression of water and emphasis of
+potential objects.  The squared value was then used as a direct measure of
+confidence that each pixel was a potential object to track.
 
 \subsection{Sky Suppression}
-The k-means classifier provides information about which pixels are water and which pixels are not water, but we would also like the algorithm to only focus on potential obstacles in the water.  The region of the sky shown in figure \ref{fig:kmeans} is classified as a non-water pixel, and we would like to suppress this response to avoid detecting the sky as an obstacle. With only the wave reflection suppression confidences, most of the sky is suppressed, but tends to have higher confidences near land as shown in figure \ref{fig:skysuppress}.  Since the sky pixels are all connected, and define a very large region, we used the Matlab bwareaopen function that removes binary pixels in connected areas that are smaller than a particular size.  By looking only at pixels that are classfied as "not water", we can detect the sky region by filtering for pixel clusters that are larger than 1/4 of the area of the image, and set the confidence values for those pixels to zero to suppress them. In some cases, potential objects to track were touching the sky region and the bwareaopen results tended to remove those object to track.  To fix this, an erode operation is done on the non-water class pixels to better separate the sky and potential objects to track.
- 
+The k-means classifier provides information about which pixels are water and
+which pixels are not water, but we would also like the algorithm to only focus
+on potential obstacles in the water.  The region of the sky shown in figure
+\ref{fig:kmeans} is classified as a non-water pixel, and we would like to
+suppress this response to avoid detecting the sky as an obstacle. With only the
+wave reflection suppression confidences, most of the sky is suppressed, but
+tends to have higher confidences near land as shown in figure
+\ref{fig:skysuppress}.  Since the sky pixels are all connected, and define a
+very large region, we used the Matlab bwareaopen function that removes binary
+pixels in connected areas that are smaller than a particular size.  By looking
+only at pixels that are classified as "not water", we can detect the sky region
+by filtering for pixel clusters that are larger than 1/4 of the area of the
+image, and set the confidence values for those pixels to zero to suppress them.
+In some cases, potential objects to track were touching the sky region and the
+bwareaopen results tended to remove those object to track.  To fix this, an
+erode operation is done on the non-water class pixels to better separate the sky
+and potential objects to track.
+
 \begin{figure}
 \label{fig:skysuppress}
 \includegraphics[height=5cm]{hsv_confidence}
 \includegraphics[height=5cm]{hsv_kmeans2_suppressed}
 \centering
-\caption{Sky Supression Before and After}
+\caption{Sky Suppression Before and After}
 \end{figure}
 
 \subsection{Confidence Image Results}
-When the above confidence values and suppressions described above are combined, a final confidence value image is produced. Pixels that are more likely to be objects to track have higher confidence values that pixels that are more likely to be water areas. Figure \ref{fig:boatconf} shows the detector correctly detecting a boat in the image.  Figure \ref{fig:towerconf} shows the detector correctly detecting a tower in the ditsance.  Figure \ref{fig:buoyconf} shows the detector identifying a buoy off in the distance.
+When the above confidence values and suppressions described above are combined,
+a final confidence value image is produced. Pixels that are more likely to be
+objects to track have higher confidence values that pixels that are more likely
+to be water areas. Figure \ref{fig:boatconf} shows the detector correctly
+detecting a boat in the image.  Figure \ref{fig:towerconf} shows the detector
+correctly detecting a tower in the distance.  Figure \ref{fig:buoyconf} shows
+the detector identifying a buoy off in the distance.
 
 \begin{figure}[H]
 \label{fig:boatconf}
@@ -315,7 +370,7 @@ by this half of the filtering.
 
 \section{Results}
 
-\section{Future Results}
+\section{Future Work}
 
 \section{Evaluation Section from Proposal}
 
