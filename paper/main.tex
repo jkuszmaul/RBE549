@@ -106,8 +106,16 @@ Overall, the object pipeline is as follows:
 \end{enumerate}
 
 \section{Pixel Level Water Segmentation}
-In the first part of the pipeline, we look at individual images and attempt to provide a pixel level detection of potential objects to track.  This step of the pipeline provides a confidence value for each pixel in the frame for confidence that the pixels is an object to track.
-The image is converted to HSV color space from the original RGB colorspace since this gives us better segmentation results. The HSV space has better color properties for segmentation since the water is typical near one particular color, but can have variations in brightness.  This also allows the segmentation to easily segment non-water pixels by the hue value, since the water tends to be near the blue and green hue values in our test images.
+In the first part of the pipeline, we look at individual images and attempt to
+provide a pixel level detection of potential objects to track.  This step of the
+pipeline provides a confidence value for each pixel in the frame for confidence
+that the pixels is an object to track.
+The image is converted to HSV color space from the original RGB colorspace since
+this gives us better segmentation results. The HSV space has better color
+properties for segmentation since the water is typical near one particular
+color, but can have variations in brightness.  This also allows the segmentation
+to easily segment non-water pixels by the hue value, since the water tends to be
+near the blue and green hue values in our test images.
 
 \subsection{Naive K-Means Classifier}
 We initially started with a basic two-class k-means classifier in order to
