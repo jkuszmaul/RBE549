@@ -113,7 +113,7 @@ color, but can have variations in brightness.  This also allows the segmentation
 to easily segment non-water pixels by the hue value, since the water tends to be
 near the blue and green hue values in our test images.
 
-\subsection{Naive K-Means Classifier}
+\subsection{Na\"ive K-Means Classifier}
 We initially started with a basic two-class k-means classifier in order to
 observe how well it would perform.  The classifier was trained on the first
 image in the video sequence, and the L2 distance to the two cluster centers was
@@ -125,7 +125,7 @@ another class with a little bit of misclassification noise.  The boat and it's
 wake are clearly labeled as potential obstacles to track, which is what we want.
 The land areas are labeled as water pixels, but for our implementation we want
 to ignore tracking the land anyways. There is a slight bit of noise in the water
-reflections towards the right side of figure \ref{fig:kmeans}, but this naive
+reflections towards the right side of figure \ref{fig:kmeans}, but this na\"ive
 method still provides very useful information.
 
 K-means does not always associate the same class identifier with the water and
@@ -142,7 +142,7 @@ water class ID is always a known value.
 \includegraphics[width=7.8cm]{hsv_kmeans2_orig}
 \includegraphics[width=8.5cm]{hsv_kmeans2_result}
 \centering
-\caption{Naive K-Means Classifier Results}
+\caption{Na\"ive K-Means Classifier Results}
 \label{fig:kmeans}
 \end{figure}
 
