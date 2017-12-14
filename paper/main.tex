@@ -65,12 +65,6 @@ of the video. As such, we should be able to safely ignore
 the rotational pose of the boat (when we apply these
 algorithms to our final boat, we will have to account for
 the much more noticeable movement of that boat).
-
-\begin{figure}[H]
-\includegraphics[width=12cm]{sample1}
-\centering
-\caption{Sample image 1}
-\end{figure}
 \begin{figure}[H]
 \includegraphics[width=12cm]{sample2}
 \centering
@@ -120,7 +114,7 @@ near the blue and green hue values in our test images.
 \subsection{Naive K-Means Classifier}
 We initially started with a basic two-class k-means classifier in order to
 observe how well it would perform.  The classifier was trained on the first
-image in the video sequence, and the l2 distance to the two cluster centers was
+image in the video sequence, and the L2 distance to the two cluster centers was
 used to classify each pixel in subsequent frames.  Surprisingly enough, the
 2-class k-means classifier worked relatively robustly on the videos that we
 provided the algorithm, as show in figure \ref{fig:kmeans}.  The water pixels
@@ -132,7 +126,7 @@ to ignore tracking the land anyways. There is a slight bit of noise in the water
 reflections towards the right side of figure \ref{fig:kmeans}, but this naive
 method still provides very useful information.
 
-Kmeans does not always associate the same class identifier with the water and
+K-means does not always associate the same class identifier with the water and
 non-water pixels each time, so we must perform an intermediary step to detect
 which class identifier it associates with water pixels.  To do so, we find the
 number of pixels in each class in the bottom half of the image, and use the sums
@@ -143,11 +137,11 @@ class ID is not what was expected, the cluster centers are swapped so that the
 water class ID is always a known value.
 
 \begin{figure}
-\label{fig:kmeans}
 \includegraphics[width=7.8cm]{hsv_kmeans2_orig}
 \includegraphics[width=8.5cm]{hsv_kmeans2_result}
 \centering
 \caption{Naive K-Means Classifier Results}
+\label{fig:kmeans}
 \end{figure}
 
 \subsection{Wave Reflection Suppression}
@@ -175,55 +169,55 @@ suppress this response to avoid detecting the sky as an obstacle. With only the
 wave reflection suppression confidences, most of the sky is suppressed, but
 tends to have higher confidences near land as shown in figure
 \ref{fig:skysuppress}.  Since the sky pixels are all connected, and define a
-very large region, we used the Matlab bwareaopen function that removes binary
+very large region, we used the Matlab \texttt{bwareaopen} function that removes binary
 pixels in connected areas that are smaller than a particular size.  By looking
 only at pixels that are classified as "not water", we can detect the sky region
 by filtering for pixel clusters that are larger than 1/4 of the area of the
 image, and set the confidence values for those pixels to zero to suppress them.
 In some cases, potential objects to track were touching the sky region and the
-bwareaopen results tended to remove those object to track.  To fix this, an
+\texttt{bwareaopen} results tended to remove those object to track.  To fix this, an
 erode operation is done on the non-water class pixels to better separate the sky
 and potential objects to track.
 
 \begin{figure}
-\label{fig:skysuppress}
 \includegraphics[height=5cm]{hsv_confidence}
 \includegraphics[height=5cm]{hsv_kmeans2_suppressed}
 \centering
 \caption{Sky Suppression Before and After}
+\label{fig:skysuppress}
 \end{figure}
 
 \subsection{Confidence Image Results}
 When the above confidence values and suppressions described above are combined,
 a final confidence value image is produced. Pixels that are more likely to be
-objects to track have higher confidence values that pixels that are more likely
+objects to track have higher confidence values than pixels that are more likely
 to be water areas. Figure \ref{fig:boatconf} shows the detector correctly
 detecting a boat in the image.  Figure \ref{fig:towerconf} shows the detector
 correctly detecting a tower in the distance.  Figure \ref{fig:buoyconf} shows
 the detector identifying a buoy off in the distance.
 
 \begin{figure}[H]
-\label{fig:boatconf}
 \includegraphics[width=7.8cm]{hsv_kmeans2_orig}
 \includegraphics[width=8.5cm]{hsv_kmeans2_suppressed}
 \centering
 \caption{Boat Confidence Results}
+\label{fig:boatconf}
 \end{figure}
 
 \begin{figure}[H]
-\label{fig:towerconf}
 \includegraphics[width=7.9cm]{hsv_kmeans2_tower}
 \includegraphics[width=8.3cm]{hsv_kmeans2_tower_result}
 \centering
 \caption{Tower Confidence Results}
+\label{fig:towerconf}
 \end{figure}
 
 \begin{figure}[H]
-\label{fig:buoyconf}
 \includegraphics[width=7.8cm]{hsv_kmeans2_buoy}
 \includegraphics[width=8.5cm]{hsv_kmeans2_buoy_result}
 \centering
 \caption{Buoy Confidence Results}
+\label{fig:buoyconf}
 \end{figure}
 
 \section{Optical Flow}
@@ -250,7 +244,7 @@ a 3-level pyramid scaling image size by a factor of 2, with a 5-pixel
 neighborhood size and a Gaussian filter on the output of size 15x15), as these
 options tended to produce good results.
 
-\subsection{Expected Flow}
+\subsection{Expected Flow} \label{expected_flow}
 
 \begin{figure}[H]
 \centering
@@ -372,13 +366,199 @@ It is also the case that any stationary, low-lying obstacles (e.g. buoys)
 will be indistinguishable from the water and so will not be detected
 by this half of the filtering.
 
-\section{Blob Detection and Filtering}
+\section{Object Creation and Management}
 
-\section{Object Matching}
+\subsection{Blob Detection and Filtering}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{threshold_bwlabel}
+\caption{Result of thresholding after dilation/labelling}
+\label{fig:threshold_bwlabel}
+\end{figure}
+
+From the results in Figures \ref{fig:boatconf} and
+\ref{fig:diff_magnitude}, we have a set of confidence values that can be used to
+identify where individual obstacles may be. In order to combine the two, we
+simply scale each result by some constant and sum the two to provide a
+detection score. Given this score, we then:
+\begin{enumerate}
+\item Threshold against some constant (tunable) value
+\item Do an erode operation using a circular erosion pattern
+\item Do a dilate in reverse, using a radius roughly twice that of the erosion,
+      so that not only is lost space taken up but nearby segments are connected.
+\item Label the connected regions using \texttt{bwlabel} (corresponding with
+      Figure \ref{fig:threshold_bwlabel}).
+\item For each of these regions, throw out any regions that meet any of the
+      following conditions (resulting in Figure \ref{fig:filtered_labels}:
+  \begin{itemize}
+    \item The object is too ``blue'' (by comparing to some hue-based value,
+          in order to try and filter out any water that got detected)
+    \item The object is too small (suggesting it may not really exist)
+    \item The object is too large (sometimes large (~half the image) connected
+          segments will appear that are virtually never real objects)
+    \item It is moving too slowly relative to us (relative to the camera,
+          the only things that should be that constant are on our
+          boat---anything else should at least contain some noise)
+  \end{itemize}
+\end{enumerate}
+
+\begin{figure}
+\centering
+\includegraphics[width=0.5\textwidth]{filtered_labels}
+\caption{Result of filtering the blobs in Figure \ref{fig:threshold_bwlabel},
+         with the boat and parts of its wake remaining}
+\label{fig:filtered_labels}
+\end{figure}
+
+Following these steps, we initialize each remaining blob as an object, reducing
+it to a bounding box (rather than an exact set of pixels), a median velocity
+(from the optical flow), a position (the center of the bounding box), a label
+(arbitrarily assigned), and a confidence score (initialized to 0.2, to represent
+an object that we are not entirely sure exists yet).
+
+We then go through and, for each object, attempt to both associate it with other
+newly created objects (in case any objects were over-segmented) as well as
+objects that we've kept track of from the previous frame.
+
+\subsection{Object Matching}
+
+When attempting to match objects, we first update all the old objects so that
+their positions have been shifted by their velocities, to better match objects
+that are moving between frames. Furthermore, we reduce the bounding box sizes on
+old objects to reflect a greater uncertainty; if the object really does exist
+over the entire previous bounding box, then that should be reaffirmed by any
+blobs detected in the current frame.
+
+We then perform the following steps:
+
+\begin{enumerate}
+\item For each pair of new objects, as well as each pairing of one new and one
+      old object, we compute a difference score that is the sum of:
+  \begin{itemize}
+  \item The difference in velocity direction
+  \item One minus the quotient in velocity magnitudes (speed), such that the
+        larger of the two speeds shall always be in the denominator
+  \item The difference in the positions (L2-norm) of the two objects, scaled
+        along each axis by the mean width and mean height between the two
+        objects (such that if the objects are perfectly aligned in one dimension
+        and touching edges in the other, they will be a distance of 1.0 apart).
+  \end{itemize}
+\item We threshold every difference, leaving a matrix of object ``neighbors''.
+\item Iterating over the newly created objects (in arbitrary order), we
+      combine that object with it's immediate neighbors, and then remove
+      all the objects that were combined from future
+      consideration\footnote{Ideally, we might do some sort of search where we
+      combine neighbors-of-neighbors and so on, but for simplicities' sake, and
+      to avoid situations where we end up combining large numbers of objects
+      that all are tenuously connected, we just explore one step out from any
+      given object.}.
+\item In order to combine each set of objects that we associated, we:
+  \begin{itemize}
+    \item Create a bounding box that surrounds all of the combined objects
+    \item Give the amalgamation the label (and time-of-existence) of the oldest
+          object being included, on the assumption that we are interested
+          in keeping tracking going across the longest period of time possible.
+    \item Perform a weighted average of the velocities, weighting by object area.
+    \item Take the maximum of the confidence scores for the individual objects,
+          assign it to the result object, and then increment it up slightly on
+          the assumption that any time we are combining more than one object,
+          we are probably becoming more certain in the overall object's
+          existence.
+  \end{itemize}
+\item Any old objects that were not associated with blobs in the current frame
+      have their confidence scores reduced and, if they dip below a confidence
+      of 0, are deleted permanently.
+\item Finally, for every object being tracked, we keep a history of its last 20
+      positions. Once an object accumulates a history of more than around 5
+      frames (to reduce potential for individual frames causing too much noise),
+      we start to compare the object's overall average position change to its
+      velocity. If the two differ by more than a particular threshold, then we
+      reduce the confidence score again. This helps to mitigate object resulting
+      from the wake of the boat, as such objects generally have optical flows
+      inconsistent with where the object actually moves frame-to-frame.
+\end{enumerate}
+
+\section{Objective Evaluation}
 
 \section{Results}
 
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{example_detection}
+\caption{Sample frame of the whole stack running}
+\label{fig:example_detection}
+\end{figure}
+
+In Figure \ref{fig:example_detection}, we see an individual frame from the
+algorithm, where we have:
+\begin{itemize}
+\item The boat identified by a yellow (indicating that it has existed for at
+      least 10 frames) solid (indicating high confidence) box with an arrow
+      pointing leftwards, roughly in the direction of its movement.
+\item Several solid and dashed boxes detecting the wake of the boat.
+\end{itemize}
+
+Longer videos can be found in our presentation:
+
+\begin{description}
+\item[\url{https://drive.google.com/file/d/1FoKWkp5xDSKwp5YyluKrclo_kGFU4gsg/view?usp=sharing}]
+  In this video we have a longer view of the same boat as Figure
+  \ref{fig:example_detection}
+\item[\url{https://drive.google.com/file/d/1ndVSwF77_4va6U8rWT4FGJOXq1AjKL_Z/view?usp=sharing}]
+  This has a slightly shorter capture of a different boat, indicating some
+  degree of robustness to different individual instances
+  \ref{fig:example_detection}
+\end{description}
+
+\subsection{Timing}
+
+As we are interested in ultimately implementing some of these algorithms on our
+actual robot, we are interested in the run time of our algorithms. These
+are extremely rough numbers, from running only single-threaded on a laptop CPU,
+but were reasonably consistent across runs:
+\begin{itemize}
+\item Around 3 seconds total per frame
+\item Around 1 second to call \texttt{opticalFlowFarneback} on the full
+      1920x1080 image
+\item Around half a second to perform the linear fit described in section
+      \ref{expected_flow}
+\item Around a second and a half spread out among other steps
+\end{itemize}
+
+The linear fit step in particular initially took up a substantial amount of
+time, but we discovered that simply subsampling the data and only using around
+10 percent of it worked almost as well while reducing the runtime to the half
+second seen here.
+
+The optical flow timing is exacerbated by the fact that we are running optical
+flow on the entire, reasonably high-resolution, image. Were we to focus better
+on interest regions, or simply use a lower resolution, we could likely achieve
+substantially better results.
+
+\subsection{Robustness}
+
+\begin{figure}[H]
+\includegraphics[width=12cm]{sample1}
+\centering
+\caption{Mirror-like water}
+\label{fig:mirror}
+\end{figure}
+
+While the algorithms do work reasonably well for footage from these particular
+conditions, we had troubles processing some parts of the data. In particular,
+early in certain mornings when not only was the sun interfering with the camera,
+but also in situations such as Figure \ref{fig:mirror}, in which the water is
+relatively flat (reducing texture) and highly reflective, meaning that it is no
+longer particularly blue.
+
 \section{Future Work}
+
+For future work, we need to actually improve the timing (as mentioned above) to
+work in real time, improve robustness for a greater variety of conditions, and
+to increase the generality to function on a less stable platform--our boat will
+certainly be pitching and rolling substantially more than the platform we had
+for this footage.
 
 \section{Evaluation Section from Proposal}
 
