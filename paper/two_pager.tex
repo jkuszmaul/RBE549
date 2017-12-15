@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[conference]{IEEEtran}
 \usepackage[utf8]{inputenc}
 \usepackage{pdfpages}
 \usepackage{amsmath}
@@ -12,9 +12,11 @@
 \usepackage{chngcntr}
 \counterwithin{figure}{section}
 \graphicspath{ {images/} }
-\title{RBE/CS549 Project: Boat Tracking/Detection}
-\author{Jordan Burklund \and James Kuszmaul}
+
 \begin{document}
+
+\title{RBE/CS549 Project: Boat Tracking/Detection}
+\author{\IEEEauthorblockN{Jordan Burklund \and James Kuszmaul}}
 \maketitle
 
 We are currently working on a robotic sailboat for the
@@ -26,7 +28,7 @@ Michalson's motorboat, which we used for developing these algorithms.
 
 Overall, the object pipeline is as follows:
 \begin{figure}[H]
-\includegraphics[width=16cm]{algorithm_flowchart}
+\includegraphics[width=7cm]{algorithm_flowchart}
 \centering
 \caption{High-Level Image Processing Pipeline}
 \end{figure}
@@ -67,8 +69,8 @@ Overall, the object pipeline is as follows:
 \end{enumerate}
 
 \begin{figure}[H]
-\includegraphics[width=7.8cm]{hsv_kmeans2_orig}
-\includegraphics[width=8.5cm]{hsv_kmeans2_suppressed}
+\includegraphics[width=7cm]{hsv_kmeans2_orig}
+\includegraphics[width=7.5cm]{hsv_kmeans2_suppressed}
 \centering
 \caption{Boat Confidence Results}
 \label{fig:boatconf}
@@ -76,7 +78,7 @@ Overall, the object pipeline is as follows:
 
 \begin{figure}
 \centering
-\includegraphics[width=0.6\textwidth]{diff_magnitude}
+\includegraphics[width=0.45\textwidth]{diff_magnitude}
 \caption{Difference between the measured and modelled optical flow.
          Dark blue means perfect match, bright yellow means a poor match (and
          higher likelihood of an object).
@@ -86,10 +88,10 @@ Overall, the object pipeline is as follows:
 
 \begin{figure}
 \hfill
-\subfigure[Blobs pre-filtering]{\includegraphics[width=0.3\textwidth]{threshold_bwlabel}}
+\subfigure[Blobs pre-filtering]{\includegraphics[width=0.23\textwidth]{threshold_bwlabel}}
 \hfill
 \subfigure[Blobs
-post-filtering]{\includegraphics[width=0.3\textwidth]{filtered_labels}}
+post-filtering]{\includegraphics[width=0.23\textwidth]{filtered_labels}}
 \hfill
 \caption{Results of blob detection on HSV and optical flow confidences}
 \label{fig:blobs}
@@ -116,10 +118,11 @@ algorithm, where we have:
 Longer videos can be found in our presentation:
 
 \begin{description}
-\item[\url{https://drive.google.com/file/d/1FoKWkp5xDSKwp5YyluKrclo_kGFU4gsg/view?usp=sharing}]
+\sloppy
+\item  \footnote{\url{https://drive.google.com/file/d/1FoKWkp5xDSKwp5YyluKrclo_kGFU4gsg/view?usp=sharing}}
   In this video we have a longer view of the same boat as Figure
   \ref{fig:example_detection}
-\item[\url{https://drive.google.com/file/d/1ndVSwF77_4va6U8rWT4FGJOXq1AjKL_Z/view?usp=sharing}]
+\item \footnote{\url{https://drive.google.com/file/d/1ndVSwF77_4va6U8rWT4FGJOXq1AjKL_Z/view?usp=sharing}}
   This has a slightly shorter capture of a different boat, indicating some
   degree of robustness to different individual instances
   \ref{fig:example_detection}
@@ -129,6 +132,24 @@ For runtime (as we hope to run these algorithms on a boat in real time),
 we currently are looking at around 3 seconds per frame, running single-threaded
 on a laptop CPU. Given reasonable optimizations, lower resolutions, and lower
 frame-rates, we can likely get these times down to work onboard the boat.
+
+\section{Robustness}
+
+\begin{figure}[H]
+\includegraphics[width=7cm]{sample1}
+\centering
+\caption{Mirror-like water}
+\label{fig:mirror}
+\end{figure}
+
+While the algorithms do work reasonably well for footage from these particular
+conditions, we had troubles processing some parts of the data. In particular,
+early mornings when not only was the sun interfering with the camera,
+but also in situations such as Figure \ref{fig:mirror}, in which the water is
+relatively flat (reducing texture) and highly reflective, meaning that it is no
+longer particularly blue. The algorithm also struggles when pointed in the
+ direction of the sun, as the reflections off of the water tend to oversaturate the image sensor.
+
 
 \section{Future Work}
 
