@@ -6,7 +6,6 @@
 \usepackage{hyperref}
 \usepackage{enumitem}
 \usepackage{graphicx}
-\usepackage[margin=1in]{geometry}
 \usepackage{float}
 \usepackage{subfigure}
 \usepackage{chngcntr}
@@ -40,10 +39,11 @@ Overall, the object pipeline is as follows:
       based on the content of a single frame, which areas are and
       are not water/sky/land/objects (see Figure \ref{fig:boatconf}:
   \begin{enumerate}
-    \item We use a nonlinear k-means classification to
+    \item Use a 2-class k-means classification to
           identify non-water based areas
-    \item And then use Matlab's \texttt{bwareaopen} to
-          identify the connected areas of the sky
+    \item Suppress wave reflections using squared cluster distance as confidence
+    \item Use Matlab's \texttt{bwareaopen} to
+          identify and suppress the connected areas of the sky
   \end{enumerate}
 \item Use optical flow information from a given pair of frames to
       locate the moving objects in a frame, based on Matlab's
@@ -72,7 +72,7 @@ Overall, the object pipeline is as follows:
 \includegraphics[width=7cm]{hsv_kmeans2_orig}
 \includegraphics[width=7.5cm]{hsv_kmeans2_suppressed}
 \centering
-\caption{Boat Confidence Results}
+\caption{Segmentation Confidence Results}
 \label{fig:boatconf}
 \end{figure}
 
